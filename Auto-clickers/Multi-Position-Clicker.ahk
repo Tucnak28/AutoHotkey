@@ -120,6 +120,10 @@ DoCycle:
     }
 return
 
+GuiClose:
+GuiEscape:
+ExitApp
+
 ; -- Hotkeys for quick start/stop --
 F8::Gosub, Btn_Start
 F9::Gosub, Btn_Stop
