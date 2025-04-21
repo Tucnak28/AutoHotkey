@@ -3,29 +3,36 @@
 SetBatchLines -1
 
 ; -- globals --
-Delay := 500           ; delay between full cycles (ms)
-InterDelay := 50       ; delay between individual clicks (ms)
-Positions := []        ; array of {hWnd:, title:, x:, y:} objects
+Delay := 500           ; delay between clicks (ms)
+InterDelay := 50       ; unused, can be removed
+Positions := []        ; array of {hWnd:, title:, x:, y:}
 Running := false
 CurrentIndex := 1
 ClickMode := "cycle"  ; "all" or "cycle"
 
 ; -- GUI layout --
-Gui +Resize +AlwaysOnTop
 Gui Font, s10
-Gui Add, ListView, vLV w360 h200, Window|X|Y
-Gui Add, Button, x+10 yp wp h24 gBtn_Add,    Add
-Gui Add, Button, x+6  yp+30 wp h24 gBtn_Remove, Remove
-Gui Add, Text,    yp+70,    Cycle Delay (ms):
-Gui Add, Edit,    vED_Delay w50 yp+68, %Delay%
-Gui Add, Button,  x+60 yp+66 wp h24 gBtn_SetDelay, Set
-Gui Add, Button,  xm+10 yp+100 wp h28 gBtn_Start, Start
-Gui Add, Button,  x+100 yp+100 wp h28 gBtn_Stop,  Stop
-Gui Add, Checkbox, xm+10 yp+40 vCB_Mode gToggleMode, Click all per cycle
-Gui Show,, Multi‑Window ControlClicker
+Gui Add, ListView, vLV w400 h200, Window|X|Y
+LV_ModifyCol(1, 180)
+LV_ModifyCol(2, 60)
+LV_ModifyCol(3, 60)
+
+Gui Add, Button, xm w100 h24 gBtn_Add, Add
+Gui Add, Button, x+10 w100 h24 gBtn_Remove, Remove
+
+Gui Add, GroupBox, xm y+20 w330 h70, Global Settings
+Gui Add, Text, xm+10 yp+20, Global Delay (ms):
+Gui Add, Edit, vED_Delay x+10 yp-3 w80 h24, %Delay%
+Gui Add, Button, x+10 yp-1 w60 h24 gBtn_SetDelay, Set
+Gui Add, Checkbox, xm+10 yp+30 vCB_Mode gToggleMode, Click all per cycle
+
+Gui Add, Button, xm y+30 w100 h30 gBtn_Start, Start
+Gui Add, Button, x+10 w100 h30 gBtn_Stop, Stop
+
+Gui Show,, Multi-Window ControlClicker
 return
 
-; -- Add new entry: capture window and client-relative coords --
+; -- Add new entry --
 Btn_Add:
     Gui Hide
     MsgBox, 64, Capture Position, Move your mouse over the target window, then press Enter.
@@ -49,13 +56,13 @@ Btn_Remove:
     }
 return
 
-; -- Update cycle delay --
+; -- Update global delay --
 Btn_SetDelay:
     Gui, Submit, NoHide
     if (ED_Delay is integer and ED_Delay > 0)
         Delay := ED_Delay
     else
-        MsgBox, 48, Error, Please enter a positive integer for the cycle delay.
+        MsgBox, 48, Error, Please enter a positive integer for the global delay.
 return
 
 ; -- Toggle click mode --
@@ -77,10 +84,10 @@ Btn_Start:
     Running := true
     GuiControl,, Btn_Start, Disabled
     GuiControl,, Btn_Stop,
-    SetTimer, DoCycle, % Delay
+    SetTimer, DoCycle, %Delay%
 return
 
-; -- Stop clicking --
+; -- Stop clicking loop --
 Btn_Stop:
     if (!Running)
         return
@@ -90,8 +97,11 @@ Btn_Stop:
     SetTimer, DoCycle, Off
 return
 
-; -- Perform one full cycle using PostMessage clicks --
+; -- Perform clicking --
 DoCycle:
+    if (!Running)
+        return
+
     if (ClickMode = "all") {
         for index, _pos in Positions {
             hWnd := _pos.hWnd
@@ -101,7 +111,7 @@ DoCycle:
             PostMessage, 0x201, 0x0001, %lParam%, , ahk_id %hWnd%
             Sleep, 5
             PostMessage, 0x202, 0x0000, %lParam%, , ahk_id %hWnd%
-            Sleep, InterDelay
+            Sleep, Delay
         }
     } else {
         if (Positions.Length() = 0)
@@ -120,11 +130,12 @@ DoCycle:
     }
 return
 
+
 GuiClose:
 GuiEscape:
 ExitApp
 
-; -- Hotkeys for quick start/stop --
+; -- Hotkeys --
 F8::Gosub, Btn_Start
 F9::Gosub, Btn_Stop
 ^!s::Gosub, Btn_Stop
